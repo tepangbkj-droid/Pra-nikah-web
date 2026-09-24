@@ -1,0 +1,1593 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+    <title>WeddingPro - Pra-Nikah Planner</title>
+
+    <!-- PWA Support -->
+    <meta name="theme-color" content="#f43f5e">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="WeddingPro">
+    <meta name="description" content="Aplikasi perencana pra-nikah: checklist, seserahan, vendor, tabungan, dan kas.">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="birthday.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+    /* Modal Preview Foto */
+.modal-photo {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+.modal-photo.active { display: flex; }
+.modal-photo img {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+}
+        :root {
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none;
+        }
+        .font-serif { font-family: 'Playfair Display', serif; }
+
+        .sidebar-link { transition: all .2s ease; }
+        .sidebar-link.active {
+            background: linear-gradient(135deg, #fb7185, #f43f5e);
+            color: white;
+            box-shadow: 0 10px 20px -6px rgba(244, 63, 94, 0.45);
+        }
+        .section-content { display: none; }
+        .section-content.active {
+            display: block;
+            animation: fadeSlideIn .35s ease;
+        }
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(160deg, #fff1f2, #ffffff);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #fb7185; border-radius: 10px; }
+
+        /* Kartu ringkasan anggaran di sidebar */
+        .budget-card {
+            background: linear-gradient(135deg, #fff1f2, #ffe4e6);
+        }
+
+        /* Header aplikasi (mobile app feel) */
+        header {
+            padding-top: calc(1rem + var(--safe-top));
+        }
+        aside#sidebar {
+            padding-top: var(--safe-top);
+        }
+
+        /* Tombol aksi utama dengan efek tekan ala aplikasi native */
+        button, a { -webkit-tap-highlight-color: transparent; }
+        .active\:scale-95:active { transform: scale(0.95); }
+
+        /* Fokus keyboard tetap terlihat (aksesibilitas) meski tap-highlight dimatikan */
+        button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+            outline: 2px solid #f43f5e;
+            outline-offset: 2px;
+            border-radius: 8px;
+        }
+
+        /* Hormati preferensi pengguna yang mematikan animasi */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+
+        /* === TABEL RESPONSIF: berubah jadi kartu di layar kecil === */
+        @media (max-width: 767px) {
+            table.responsive-table thead { display: none; }
+            table.responsive-table, table.responsive-table tbody, table.responsive-table tr, table.responsive-table td {
+                display: block;
+                width: 100%;
+            }
+            table.responsive-table tr {
+                padding: 14px 16px;
+                border-bottom: 1px solid #f1f5f9;
+            }
+            table.responsive-table tr:hover { background: transparent !important; }
+            table.responsive-table td {
+                padding: 6px 0 !important;
+                border: none !important;
+            }
+            table.responsive-table td[data-label]:not([data-label=""])::before {
+                content: attr(data-label);
+                display: block;
+                font-size: 10px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: .05em;
+                color: #94a3b8;
+                margin-bottom: 4px;
+            }
+            table.responsive-table td.td-empty::before { content: none; }
+        }
+
+        /* Tombol Install App */
+        #installBtn {
+            display: none;
+        }
+        #installBtn.show {
+            display: inline-flex;
+        }
+
+        /* === Toast Notifikasi === */
+        #toast-container {
+            position: fixed;
+            top: calc(1rem + var(--safe-top));
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10001;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: calc(100% - 32px);
+            max-width: 380px;
+            pointer-events: none;
+        }
+        .toast-item {
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px -8px rgba(0,0,0,.25);
+            font-size: 13px;
+            font-weight: 600;
+            color: white;
+            animation: toastIn .25s ease;
+        }
+        .toast-item.leaving { animation: toastOut .25s ease forwards; }
+        @keyframes toastIn { from { opacity:0; transform: translateY(-10px) scale(.96); } to { opacity:1; transform: translateY(0) scale(1); } }
+        @keyframes toastOut { from { opacity:1; } to { opacity:0; transform: translateY(-8px) scale(.96); } }
+        .toast-success { background: linear-gradient(135deg,#10b981,#059669); }
+        .toast-error { background: linear-gradient(135deg,#f43f5e,#e11d48); }
+        .toast-info { background: linear-gradient(135deg,#3b82f6,#2563eb); }
+
+        /* === Bottom Nav (mobile app feel) === */
+        #bottomNav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 45;
+            background: rgba(255,255,255,.92);
+            backdrop-filter: blur(14px);
+            border-top: 1px solid #f1f5f9;
+            padding-bottom: var(--safe-bottom);
+            box-shadow: 0 -8px 24px -12px rgba(0,0,0,.12);
+        }
+        #bottomNav .bn-item { color: #94a3b8; }
+        #bottomNav .bn-item.active { color: #f43f5e; }
+        #bottomNav .bn-item.active .bn-icon-wrap { background: linear-gradient(135deg,#fb7185,#f43f5e); color:#fff; box-shadow: 0 6px 14px -4px rgba(244,63,94,.5); }
+        #bottomNav .bn-icon-wrap { width: 34px; height: 34px; border-radius: 12px; display:flex; align-items:center; justify-content:center; transition: all .2s ease; }
+
+        @media (min-width: 1024px) { #bottomNav { display: none; } }
+
+        /* Beri ruang konten agar tak tertutup bottom nav di layar kecil */
+        @media (max-width: 1023px) {
+            #content-scroll { padding-bottom: 100px !important; }
+        }
+
+        /* === Perbaikan responsif ekstra untuk layar sangat kecil (<380px) === */
+        @media (max-width: 380px) {
+            h3.font-serif.text-2xl, h3.font-serif.text-3xl { font-size: 1.35rem !important; }
+            #section-title { font-size: .95rem; }
+            .budget-card p#grand-total { font-size: 1rem; }
+        }
+
+        /* Pastikan grid form input tidak sempit ekstrem & tabel tidak overflow horizontal di layar medium */
+        .table-scroll-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+        /* Cegah zoom otomatis iOS saat fokus input (min 16px), tanpa mengubah ukuran tampilan */
+        input[type="text"], input[type="number"], input[type="tel"], input[type="url"], input[type="date"], input[type="password"], select, textarea {
+            font-size: 16px;
+        }
+
+        /* Target sentuh minimum 44x44px untuk tombol icon-only di HP (standar aksesibilitas) */
+        @media (max-width: 767px) {
+            #kas-table-body button, #savings-table-body button, #inventory-table-body button, #tamu-table-body button {
+                min-width: 44px;
+                min-height: 44px;
+            }
+        }
+        @media (min-width: 640px) {
+            input.text-sm, select.text-sm { font-size: 14px; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div id="toast-container"></div>
+
+    <div id="loader" class="loading-overlay">
+        <div class="flex flex-col items-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-rose-500 mb-4"></div>
+            <p class="text-rose-500 font-medium">Menyiapkan Detail Persiapan...</p>
+        </div>
+    </div>
+
+    <div class="min-h-screen flex">
+        <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 hidden lg:hidden" onclick="toggleSidebar()"></div>
+
+        <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 w-72 bg-white border-r border-gray-100 z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none">
+            <div class="p-6 h-full flex flex-col">
+                <div class="flex items-center gap-3 mb-10">
+                    <div class="bg-gradient-to-br from-rose-400 to-rose-600 p-2.5 rounded-2xl text-white shadow-lg shadow-rose-200">
+                        <i data-lucide="heart" class="fill-current"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800 font-serif leading-tight">WeddingPro</h1>
+                        <p class="text-[11px] text-gray-400 font-medium tracking-wide">Pra-Nikah Planner</p>
+                    </div>
+                </div>
+                
+                <nav class="space-y-2 flex-1">
+                    <button onclick="switchTab('checklist')" id="btn-checklist" class="sidebar-link active w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-gray-500 hover:bg-rose-50 hover:text-rose-600">
+                        <i data-lucide="list-checks"></i>
+                        <span class="font-medium">Panduan Lengkap</span>
+                    </button>
+                    <button onclick="switchTab('seserahan')" id="btn-seserahan" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-gray-500 hover:bg-rose-50 hover:text-rose-600">
+                        <i data-lucide="gift"></i>
+                        <span class="font-medium">Seserahan & Mahar</span>
+                    </button>
+                    <button onclick="switchTab('vendor')" id="btn-vendor" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-gray-500 hover:bg-rose-50 hover:text-rose-600">
+                        <i data-lucide="briefcase"></i>
+                        <span class="font-medium">Daftar Vendor</span>
+                    </button>
+                    <button onclick="switchTab('prabotan')" id="btn-prabotan" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-gray-500 hover:bg-rose-50 hover:text-rose-600">
+                        <i data-lucide="sofa"></i>
+                        <span class="font-medium">Isi Rumah</span>
+                    </button>
+                    <button onclick="switchTab('tabungan')" id="btn-tabungan" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-gray-500 hover:bg-rose-50 hover:text-rose-600">
+                        <i data-lucide="piggy-bank"></i>
+                        <span class="font-medium">Tabungan</span>
+                    </button>
+                    <button onclick="switchTab('kas')" id="btn-kas" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-gray-500 hover:bg-rose-50 hover:text-rose-600">
+    <i data-lucide="arrow-up-down"></i>
+    <span class="font-medium">Kas Masuk/Keluar</span>
+</button>
+                    <button onclick="switchTab('tamu')" id="btn-tamu" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-gray-500 hover:bg-rose-50 hover:text-rose-600">
+    <i data-lucide="users"></i>
+    <span class="font-medium">Daftar Tamu</span>
+</button>
+                    <button onclick="switchTab('pengaturan')" id="btn-pengaturan" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-gray-500 hover:bg-rose-50 hover:text-rose-600">
+    <i data-lucide="send"></i>
+    <span class="font-medium">Notifikasi Telegram</span>
+</button>
+                </nav>
+
+                <button id="installBtn" onclick="triggerInstall()" class="items-center justify-center gap-2 mb-3 w-full bg-gray-900 text-white text-xs font-bold py-3 rounded-xl hover:bg-gray-800 transition-all active:scale-95">
+                    <i data-lucide="download" size="16"></i> Install Aplikasi
+                </button>
+
+                <div class="mt-auto p-4 budget-card rounded-2xl border border-rose-100">
+                    <p class="text-[10px] text-rose-400 font-bold uppercase tracking-wider mb-1 text-center">Estimasi Anggaran</p>
+                    <p id="grand-total" class="text-lg font-bold text-rose-600 text-center">Rp 0</p>
+                    <div class="mt-2 pt-2 border-t border-rose-200">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider text-center">Kekurangan Dana</p>
+                        <p id="gap-total" class="text-sm font-bold text-orange-600 text-center">Rp 0</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <header class="bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-30">
+                <div class="flex items-center gap-3">
+                    <button class="lg:hidden p-2 text-gray-500 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-colors" onclick="toggleSidebar()" aria-label="Buka menu navigasi"><i data-lucide="menu"></i></button>
+                    <h2 id="section-title" class="text-base sm:text-lg font-bold text-gray-800 font-serif">Checklist Persiapan</h2>
+                </div>
+                <div id="user-status" class="hidden sm:block text-[10px] text-gray-400 font-mono bg-gray-50 px-3 py-1.5 rounded-full border">UID: ---</div>
+            </header>
+
+            <div id="content-scroll" class="flex-1 overflow-y-auto p-4 md:p-8">
+                <div id="section-checklist" class="section-content active max-w-4xl mx-auto">
+                    <div class="mb-10">
+                        <h3 class="text-3xl font-bold text-gray-900 font-serif">Rencana Detail Pernikahan</h3>
+                        <p class="text-gray-500 mt-2">Daftar tugas terperinci berdasarkan linimasa ideal.</p>
+                    </div>
+                    <div id="checklist-timeline" class="space-y-12"></div>
+                </div>
+
+<div id="section-inventory" class="section-content max-w-5xl mx-auto space-y-8">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+            <h3 id="inv-title" class="text-2xl font-bold text-gray-800 font-serif capitalize">Manajemen Item</h3>
+            <p class="text-sm text-gray-500">Kelola rincian, foto barang, dan status pembelian.</p>
+        </div>
+        <div class="bg-white px-6 py-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+            <div class="p-3 bg-rose-50 text-rose-500 rounded-xl"><i data-lucide="calculator"></i></div>
+            <div>
+                <p id="subtotal-label" class="text-[10px] font-bold text-gray-500 uppercase">Subtotal Belum Dibeli</p>
+                <p id="subtotal-value" class="text-2xl font-bold text-gray-800">Rp 0</p>
+            </div>
+        </div>
+    </div>
+
+<div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+    <div class="space-y-1.5 lg:col-span-2">
+        <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Nama Barang</label>
+        <input id="inp-name" type="text" placeholder="Misal: Cincin" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-rose-200">
+    </div>
+    
+    <div id="cat-container" class="space-y-1.5">
+        <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Kategori</label>
+        <select id="inp-cat" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none">
+            <option value="Umum">Umum</option>
+            <option value="Pakaian">Pakaian</option>
+            <option value="Skincare/Makeup">Skincare/Makeup</option>
+            <option value="Perlengkapan Ibadah">Perlengkapan Ibadah</option>
+            <option value="Perhiasan">Perhiasan</option>
+        </select>
+    </div>
+
+    <div class="space-y-1.5">
+        <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Harga (Rp)</label>
+        <input id="inp-price" type="number" placeholder="0" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none">
+    </div>
+
+    <div class="space-y-1.5">
+        <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Link & Foto</label>
+        <div class="flex gap-2">
+            <input id="inp-link" type="url" placeholder="https://..." class="flex-1 p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-rose-200">
+            <label class="cursor-pointer bg-rose-50 text-rose-500 p-3 rounded-xl hover:bg-rose-100 transition-all">
+                <i data-lucide="camera" size="20"></i>
+                <input id="inp-file" type="file" accept="image/*" class="hidden">
+            </label>
+        </div>
+    </div>
+
+    <div class="space-y-1.5 flex items-end">
+        <button onclick="addItem()" id="btn-add-item" class="w-full bg-rose-500 text-white h-[46px] rounded-xl hover:bg-rose-600 flex items-center justify-center shadow-lg shadow-rose-100 transition-all active:scale-95">
+            <i data-lucide="plus" class="mr-2"></i> Tambah
+        </button>
+    </div>
+</div>
+
+    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        <table class="w-full text-left text-sm responsive-table">
+           <thead class="bg-slate-50/50">
+    <tr>
+        <th class="px-6 py-5 font-bold text-gray-400 uppercase tracking-widest text-[10px] w-16">Beli</th>
+        <th class="px-6 py-5 font-bold text-gray-400 uppercase tracking-widest text-[10px]">Detail Barang</th>
+        <th class="px-6 py-5 font-bold text-gray-400 uppercase tracking-widest text-[10px]">Tautan</th> <th class="px-6 py-5 font-bold text-gray-400 uppercase tracking-widest text-[10px]">Harga</th>
+        <th class="px-6 py-5 font-bold text-gray-400 uppercase tracking-widest text-[10px] text-right">Aksi</th>
+    </tr>
+</thead>
+            <tbody id="inventory-table-body" class="divide-y divide-gray-50"></tbody>
+        </table>
+    </div>
+</div>
+                <div id="section-tabungan" class="section-content max-w-5xl mx-auto space-y-8">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-800 font-serif">Catatan Tabungan</h3>
+                            <p class="text-sm text-gray-500">Pantau akumulasi dana dari masing-masing pihak.</p>
+                        </div>
+                        <div class="bg-white px-6 py-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+                            <div class="p-3 bg-emerald-50 text-emerald-500 rounded-xl"><i data-lucide="wallet"></i></div>
+                            <div>
+                                <p class="text-[10px] font-bold text-gray-500 uppercase">Total Terkumpul</p>
+                                <p id="saving-total-value" class="text-2xl font-bold text-emerald-600">Rp 0</p>
+                            </div>
+                        </div>
+                    </div>
+
+<div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="space-y-1.5">
+        <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Nama Penabung</label>
+        <input id="inp-saver" type="text" placeholder="Nama..." class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-200">
+    </div>
+    <div class="space-y-1.5">
+        <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Jenis</label>
+        <select id="inp-save-type" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none">
+            <option value="masuk">Setoran (+)</option>
+            <option value="keluar">Penarikan (-)</option>
+        </select>
+    </div>
+    <div class="space-y-1.5">
+        <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Tanggal</label>
+        <input id="inp-save-date" type="date" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none">
+    </div>
+    <div class="space-y-1.5">
+        <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Nominal (Rp)</label>
+        <div class="flex gap-2">
+            <input id="inp-save-amount" type="number" placeholder="0" class="flex-1 p-3 bg-slate-50 border-none rounded-xl text-sm outline-none">
+            <button onclick="addSaving()" class="bg-emerald-500 text-white px-5 rounded-xl hover:bg-emerald-600 transition-all active:scale-95 shadow-lg shadow-emerald-100">
+                <i data-lucide="plus"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="space-y-4">
+    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Rekapan Saldo Per Bulan</h4>
+    <div id="monthly-statement" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        </div>
+</div>
+
+                    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                        <table class="w-full text-left text-sm responsive-table">
+                            <thead class="bg-slate-50/50">
+                                <tr>
+                                    <th class="px-6 py-5 font-bold text-gray-400 uppercase tracking-widest text-[10px]">Penyetor</th>
+                                    <th class="px-6 py-5 font-bold text-gray-400 uppercase tracking-widest text-[10px]">Nominal</th>
+                                    <th class="px-6 py-5 font-bold text-gray-400 uppercase tracking-widest text-[10px] text-right">Tindakan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="savings-table-body" class="divide-y divide-gray-50"></tbody>
+                        </table>
+                    </div>
+                </div>
+<div id="section-kas" class="section-content max-w-5xl mx-auto space-y-8">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+            <h3 class="text-2xl font-bold text-gray-800 font-serif">Arus Kas (Cashflow)</h3>
+            <p class="text-sm text-gray-500">Catat dana masuk dan pengeluaran dengan bukti nota.</p>
+        </div>
+        <div class="bg-white px-6 py-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+            <div class="p-3 bg-blue-50 text-blue-500 rounded-xl"><i data-lucide="trending-up"></i></div>
+            <div>
+                <p class="text-[10px] font-bold text-gray-500 uppercase">Saldo Kas</p>
+                <p id="kas-balance-value" class="text-2xl font-bold text-blue-600">Rp 0</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div class="space-y-1.5">
+            <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Keterangan</label>
+            <input id="inp-kas-desc" type="text" placeholder="Misal: Bayar Tenda" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-200">
+        </div>
+        <div class="space-y-1.5">
+            <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Jenis</label>
+            <select id="inp-kas-type" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none">
+                <option value="masuk">Uang Masuk (+)</option>
+                <option value="keluar">Uang Keluar (-)</option>
+            </select>
+        </div>
+        <div class="space-y-1.5">
+            <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Tanggal</label>
+            <input id="inp-kas-date" type="date" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none">
+        </div>
+        <div class="space-y-1.5">
+            <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Foto Nota</label>
+            <input id="inp-kas-file" type="file" accept="image/*" class="w-full text-[10px] text-slate-500 file:mr-2 file:py-2 file:px-3 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700">
+        </div>
+        <div class="space-y-1.5">
+            <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Nominal (Rp)</label>
+            <div class="flex gap-2">
+                <input id="inp-kas-amount" type="number" placeholder="0" class="flex-1 p-3 bg-slate-50 border-none rounded-xl text-sm outline-none">
+                <button onclick="addKas()" id="btn-add-kas" class="bg-blue-600 text-white px-5 rounded-xl hover:bg-blue-700 transition-all active:scale-95">
+                    <i data-lucide="plus"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        <table class="w-full text-left text-sm responsive-table">
+            <thead class="bg-slate-50/50">
+                <tr>
+                    <th class="px-6 py-5 font-bold text-gray-400 uppercase tracking-widest text-[10px]">Tanggal & Keterangan</th>
+                    <th class="px-6 py-5 font-bold text-gray-400 uppercase tracking-widest text-[10px]">Jenis</th>
+                    <th class="px-6 py-5 font-bold text-gray-400 uppercase tracking-widest text-[10px]">Nominal</th>
+                    <th class="px-6 py-5 font-bold text-gray-400 uppercase tracking-widest text-[10px] text-right">Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="kas-table-body" class="divide-y divide-gray-50"></tbody>
+        </table>
+    </div>
+</div>
+
+<div id="section-tamu" class="section-content max-w-5xl mx-auto space-y-8">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+            <h3 class="text-2xl font-bold text-gray-800 font-serif">Daftar Tamu Undangan</h3>
+            <p class="text-sm text-gray-500">Catat nama tamu, nomor WA, dan pihak yang mengundang.</p>
+        </div>
+    </div>
+
+    <!-- Kartu Ringkasan -->
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+            <div class="p-3 bg-purple-50 text-purple-500 rounded-xl"><i data-lucide="users"></i></div>
+            <div>
+                <p class="text-[10px] font-bold text-gray-500 uppercase">Total Tamu</p>
+                <p id="tamu-total-value" class="text-2xl font-bold text-purple-600">0</p>
+            </div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+            <div class="p-3 bg-blue-50 text-blue-500 rounded-xl"><i data-lucide="user"></i></div>
+            <div>
+                <p class="text-[10px] font-bold text-gray-500 uppercase">Pihak Pria</p>
+                <p id="tamu-pria-value" class="text-2xl font-bold text-blue-600">0</p>
+            </div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 col-span-2 md:col-span-1">
+            <div class="p-3 bg-rose-50 text-rose-500 rounded-xl"><i data-lucide="user"></i></div>
+            <div>
+                <p class="text-[10px] font-bold text-gray-500 uppercase">Pihak Wanita</p>
+                <p id="tamu-wanita-value" class="text-2xl font-bold text-rose-600">0</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pengaturan Undangan (Link + Template Pesan WA) -->
+    <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
+        <div class="flex items-center gap-2">
+            <div class="p-2 bg-emerald-50 text-emerald-500 rounded-lg"><i data-lucide="link" size="18"></i></div>
+            <h4 class="font-bold text-gray-700">Pengaturan Undangan WhatsApp</h4>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-1.5">
+                <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Link Undangan Digital</label>
+                <input id="inp-undangan-link" type="url" placeholder="https://undangan.com/nama-kalian" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-200">
+            </div>
+            <div class="space-y-1.5">
+                <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Template Pesan (gunakan {nama} & {link})</label>
+                <input id="inp-undangan-pesan" type="text" placeholder="Halo {nama}, kami mengundang..." class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-200">
+            </div>
+        </div>
+        <button onclick="saveUndanganSettings()" id="btn-save-undangan" class="bg-emerald-500 text-white text-sm font-bold px-5 py-3 rounded-xl hover:bg-emerald-600 transition-all active:scale-95 flex items-center gap-2">
+            <i data-lucide="save" size="16"></i> Simpan Pengaturan
+        </button>
+        <p class="text-xs text-gray-400">Contoh template: <em>"Assalamualaikum {nama}, kami mengundang kehadiran Anda di pernikahan kami. Detail acara: {link}"</em></p>
+    </div>
+
+    <!-- Form Tambah Tamu -->
+    <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="space-y-1.5">
+            <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Nama Tamu</label>
+            <input id="inp-tamu-nama" type="text" placeholder="Nama tamu..." class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-200">
+        </div>
+        <div class="space-y-1.5">
+            <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Nomor WA</label>
+            <input id="inp-tamu-wa" type="tel" placeholder="08xxxxxxxxxx" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-200">
+        </div>
+        <div class="space-y-1.5">
+            <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Pihak</label>
+            <select id="inp-tamu-pihak" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none">
+                <option value="pria">Pihak Pria</option>
+                <option value="wanita">Pihak Wanita</option>
+            </select>
+        </div>
+        <div class="space-y-1.5 flex items-end">
+            <button onclick="addTamu()" id="btn-add-tamu" class="w-full bg-purple-500 text-white h-[46px] rounded-xl hover:bg-purple-600 flex items-center justify-center shadow-lg shadow-purple-100 transition-all active:scale-95">
+                <i data-lucide="plus" class="mr-2"></i> Tambah Tamu
+            </button>
+        </div>
+    </div>
+
+    <!-- Tabel Tamu -->
+    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        <table class="w-full text-left text-sm responsive-table">
+            <thead class="bg-slate-50/50">
+                <tr>
+                    <th class="px-6 py-5 font-bold text-gray-400 uppercase tracking-widest text-[10px]">Nama</th>
+                    <th class="px-6 py-5 font-bold text-gray-400 uppercase tracking-widest text-[10px]">No. WA</th>
+                    <th class="px-6 py-5 font-bold text-gray-400 uppercase tracking-widest text-[10px]">Pihak</th>
+                    <th class="px-6 py-5 font-bold text-gray-400 uppercase tracking-widest text-[10px]">Status Undangan</th>
+                    <th class="px-6 py-5 font-bold text-gray-400 uppercase tracking-widest text-[10px] text-right">Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="tamu-table-body" class="divide-y divide-gray-50"></tbody>
+        </table>
+    </div>
+</div>
+
+<div id="section-pengaturan" class="section-content max-w-3xl mx-auto space-y-6">
+    <div>
+        <h3 class="text-2xl font-bold text-gray-800 font-serif">Notifikasi Telegram</h3>
+        <p class="text-sm text-gray-500 mt-1">Dapatkan notifikasi otomatis ke Telegram setiap ada kas masuk atau keluar yang dicatat.</p>
+    </div>
+
+    <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-5">
+        <div class="flex items-center justify-between bg-blue-50 p-4 rounded-2xl">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-blue-500 text-white rounded-xl"><i data-lucide="send" size="18"></i></div>
+                <div>
+                    <p class="font-bold text-gray-800 text-sm">Aktifkan Notifikasi</p>
+                    <p class="text-xs text-gray-500">Kirim otomatis saat kas dicatat</p>
+                </div>
+            </div>
+            <button id="tg-toggle" onclick="toggleTelegram()" class="relative w-12 h-7 rounded-full bg-gray-300 transition-colors shrink-0">
+                <span id="tg-toggle-dot" class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow transition-transform"></span>
+            </button>
+        </div>
+
+        <div class="space-y-1.5">
+            <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Bot Token</label>
+            <input id="inp-tg-token" type="text" placeholder="123456789:AAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-200">
+            <p class="text-xs text-gray-400 px-1">Dapatkan dari <span class="font-semibold">@BotFather</span> di Telegram.</p>
+        </div>
+
+        <div class="space-y-1.5">
+            <label class="text-[11px] font-bold text-gray-500 uppercase px-1">Chat ID</label>
+            <input id="inp-tg-chatid" type="text" placeholder="Contoh: 6289520966316 atau -100xxxxxxxxxx" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-200">
+            <p class="text-xs text-gray-400 px-1">Dapatkan dari bot seperti <span class="font-semibold">@userinfobot</span>, atau ID grup Telegram kalian.</p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3 pt-2">
+            <button onclick="saveTelegramSettings()" id="btn-save-tg" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center gap-2">
+                <i data-lucide="save" size="16"></i> Simpan Pengaturan
+            </button>
+            <button onclick="testTelegramNotification()" id="btn-test-tg" class="flex-1 bg-white border-2 border-blue-200 text-blue-600 font-bold py-3 rounded-xl hover:bg-blue-50 transition-all active:scale-95 flex items-center justify-center gap-2">
+                <i data-lucide="zap" size="16"></i> Tes Kirim Notifikasi
+            </button>
+        </div>
+
+        <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex gap-3">
+            <i data-lucide="info" size="18" class="text-amber-500 shrink-0 mt-0.5"></i>
+            <p class="text-xs text-amber-700 leading-relaxed">
+                Cara singkat: 1) Chat <span class="font-semibold">@BotFather</span> → <span class="font-semibold">/newbot</span> untuk buat bot & dapatkan token. 2) Mulai chat dengan bot kalian (klik Start). 3) Chat <span class="font-semibold">@userinfobot</span> untuk dapatkan Chat ID kalian. 4) Tempel Token & Chat ID di atas, lalu simpan. Pengaturan disimpan di perangkat ini saja.
+            </p>
+        </div>
+    </div>
+</div>
+        </main>
+    </div>
+
+    <!-- Bottom Navigation (mobile) -->
+    <nav id="bottomNav" class="lg:hidden">
+        <div class="flex items-stretch justify-between px-1">
+            <button onclick="switchTab('checklist')" id="bn-checklist" class="bn-item flex-1 flex flex-col items-center gap-1 py-2.5 active" aria-label="Panduan">
+                <span class="bn-icon-wrap"><i data-lucide="list-checks" size="18"></i></span>
+                <span class="text-[10px] font-bold">Panduan</span>
+            </button>
+            <button onclick="switchTab('kas')" id="bn-kas" class="bn-item flex-1 flex flex-col items-center gap-1 py-2.5" aria-label="Kas">
+                <span class="bn-icon-wrap"><i data-lucide="arrow-up-down" size="18"></i></span>
+                <span class="text-[10px] font-bold">Kas</span>
+            </button>
+            <button onclick="switchTab('tabungan')" id="bn-tabungan" class="bn-item flex-1 flex flex-col items-center gap-1 py-2.5" aria-label="Tabungan">
+                <span class="bn-icon-wrap"><i data-lucide="piggy-bank" size="18"></i></span>
+                <span class="text-[10px] font-bold">Nabung</span>
+            </button>
+            <button onclick="switchTab('tamu')" id="bn-tamu" class="bn-item flex-1 flex flex-col items-center gap-1 py-2.5" aria-label="Tamu">
+                <span class="bn-icon-wrap"><i data-lucide="users" size="18"></i></span>
+                <span class="text-[10px] font-bold">Tamu</span>
+            </button>
+            <button onclick="toggleSidebar()" id="bn-more" class="bn-item flex-1 flex flex-col items-center gap-1 py-2.5" aria-label="Lainnya">
+                <span class="bn-icon-wrap"><i data-lucide="menu" size="18"></i></span>
+                <span class="text-[10px] font-bold">Lainnya</span>
+            </button>
+        </div>
+    </nav>
+
+<div id="modal-photo" class="modal-photo" onclick="closePreview()">
+    <div class="relative max-w-4xl w-full flex justify-center" onclick="event.stopPropagation()">
+        <img id="modal-img" src="" alt="Nota Preview">
+        <button onclick="closePreview()" class="absolute -top-10 right-0 text-white flex items-center gap-2">
+            <i data-lucide="x"></i> Tutup
+        </button>
+    </div>
+</div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+        import { getFirestore, doc, collection, setDoc, onSnapshot, addDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+        import { initBirthdaySurprise } from './birthday.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAJwuNmftdXJxZIwyQq1Cx64DC7Zm1zZ7M",
+            authDomain: "weding-planning.firebaseapp.com",
+            projectId: "weding-planning",
+            storageBucket: "weding-planning.firebasestorage.app",
+            messagingSenderId: "989634176070",
+            appId: "1:989634176070:web:c961669c8371212661d647"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = "wedding-planner-001";
+
+        let currentUser = null;
+        let currentTab = 'checklist';
+      let data = { seserahan: [], vendor: [], prabotan: [], tabungan: [], checklist: {}, kas: [], tamu: [], settingsUndangan: { link: '', message: '' } };
+
+        // ==== Toast Notifikasi (pengganti alert()) ====
+        window.showToast = (message, type = 'info') => {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const icons = { success: 'check-circle', error: 'x-circle', info: 'info' };
+            const el = document.createElement('div');
+            el.className = `toast-item toast-${type}`;
+            el.innerHTML = `<i data-lucide="${icons[type] || 'info'}" size="18"></i><span>${message}</span>`;
+            container.appendChild(el);
+            lucide.createIcons();
+            setTimeout(() => {
+                el.classList.add('leaving');
+                setTimeout(() => el.remove(), 250);
+            }, 3200);
+        };
+
+        // ==== Notifikasi Telegram (Bot API dipanggil langsung dari browser) ====
+        // Pengaturan disimpan lokal di perangkat (localStorage), tidak dibagikan lewat Firestore.
+        const TG_KEYS = { token: 'tg_bot_token', chatId: 'tg_chat_id', enabled: 'tg_enabled' };
+
+        function getTelegramConfig() {
+            return {
+                token: localStorage.getItem(TG_KEYS.token) || '',
+                chatId: localStorage.getItem(TG_KEYS.chatId) || '',
+                enabled: localStorage.getItem(TG_KEYS.enabled) === '1'
+            };
+        }
+
+        window.loadTelegramSettingsUI = () => {
+            const cfg = getTelegramConfig();
+            const tokenInput = document.getElementById('inp-tg-token');
+            const chatInput = document.getElementById('inp-tg-chatid');
+            const dot = document.getElementById('tg-toggle-dot');
+            const toggle = document.getElementById('tg-toggle');
+            if (tokenInput) tokenInput.value = cfg.token;
+            if (chatInput) chatInput.value = cfg.chatId;
+            if (toggle && dot) {
+                toggle.classList.toggle('bg-blue-500', cfg.enabled);
+                toggle.classList.toggle('bg-gray-300', !cfg.enabled);
+                dot.style.transform = cfg.enabled ? 'translateX(20px)' : 'translateX(0)';
+            }
+        };
+
+        window.toggleTelegram = () => {
+            const cfg = getTelegramConfig();
+            localStorage.setItem(TG_KEYS.enabled, cfg.enabled ? '0' : '1');
+            window.loadTelegramSettingsUI();
+        };
+
+        window.saveTelegramSettings = () => {
+            const token = document.getElementById('inp-tg-token').value.trim();
+            const chatId = document.getElementById('inp-tg-chatid').value.trim();
+            if (!token || !chatId) {
+                showToast('Isi Bot Token dan Chat ID terlebih dahulu.', 'error');
+                return;
+            }
+            localStorage.setItem(TG_KEYS.token, token);
+            localStorage.setItem(TG_KEYS.chatId, chatId);
+            localStorage.setItem(TG_KEYS.enabled, '1');
+            window.loadTelegramSettingsUI();
+            showToast('Pengaturan Telegram tersimpan!', 'success');
+        };
+
+        async function sendTelegramNotification(text) {
+            const cfg = getTelegramConfig();
+            if (!cfg.enabled || !cfg.token || !cfg.chatId) return { ok: false, skipped: true };
+            try {
+                const res = await fetch(`https://api.telegram.org/bot${cfg.token}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: cfg.chatId, text, parse_mode: 'HTML' })
+                });
+                const json = await res.json();
+                if (!json.ok) console.warn('Telegram menolak pesan:', json.description);
+                return json;
+            } catch (err) {
+                console.warn('Gagal mengirim notifikasi Telegram:', err);
+                return { ok: false, error: err };
+            }
+        }
+
+        window.testTelegramNotification = async () => {
+            const token = document.getElementById('inp-tg-token').value.trim();
+            const chatId = document.getElementById('inp-tg-chatid').value.trim();
+            if (!token || !chatId) return showToast('Isi Bot Token dan Chat ID dulu.', 'error');
+
+            // Simpan sementara supaya sendTelegramNotification bisa memakainya langsung
+            localStorage.setItem(TG_KEYS.token, token);
+            localStorage.setItem(TG_KEYS.chatId, chatId);
+            localStorage.setItem(TG_KEYS.enabled, '1');
+            window.loadTelegramSettingsUI();
+
+            const btn = document.getElementById('btn-test-tg');
+            btn.disabled = true;
+            const original = btn.innerHTML;
+            btn.innerHTML = '<div class="animate-spin h-4 w-4 border-2 border-blue-400 border-t-transparent rounded-full"></div>';
+
+            const result = await sendTelegramNotification('✅ <b>Tes Notifikasi WeddingPro</b>\nKoneksi ke bot Telegram berhasil! Notifikasi kas masuk/keluar akan terkirim ke sini.');
+
+            btn.disabled = false;
+            btn.innerHTML = original;
+            lucide.createIcons();
+
+            if (result && result.ok) {
+                showToast('Notifikasi tes berhasil dikirim ke Telegram!', 'success');
+            } else {
+                showToast('Gagal mengirim. Cek Bot Token, Chat ID, dan pastikan sudah chat /start ke bot.', 'error');
+            }
+        };
+
+        const timeline = [
+    {
+        period: "12-9 Bulan Sebelum",
+        tasks: [
+            { id: 't1', title: 'Tentukan Anggaran & Kontribusi', detail: 'Diskusi detail dana dari pihak pria, wanita, dan orang tua.' },
+            { id: 't2', title: 'Pilih Konsep & Warna Utama', detail: 'Modern, adat, atau outdoor? Tentukan palet warna (moodboard).' },
+            { id: 't3', title: 'Booking Venue & Tanggal', detail: 'Venue populer biasanya penuh 1 tahun sebelumnya.' },
+            { id: 't4', title: 'List Calon Tamu', detail: 'Kumpulkan data alamat dan nomor telepon tamu.' }
+        ]
+    },
+    {
+        period: "8-6 Bulan Sebelum",
+        tasks: [
+            { id: 't5', title: 'Pilih Vendor Katering', detail: 'Test food minimal di 3 vendor berbeda.' },
+            { id: 't6', title: 'Fotografer & Videografer', detail: 'Booking untuk hari H dan sesi pre-wedding.' },
+            { id: 't7', title: 'MUA & Busana Pengantin', detail: 'Fitting pertama dan pilih perias untuk keluarga.' },
+            { id: 't8', title: 'Pre-wedding Photoshoot', detail: 'Lakukan sesi foto agar ada waktu untuk editing.' }
+        ]
+    },
+    {
+        period: "5-4 Bulan Sebelum",
+        tasks: [
+            { id: 't9', title: 'Pesan Cincin Kawin', detail: 'Proses pembuatan/grafir nama biasanya memakan waktu 1-2 bulan.' },
+            { id: 't10', title: 'Tentukan Seragam Keluarga', detail: 'Pembelian bahan dan distribusi ke penjahit.' },
+            { id: 't11', title: 'Vendor Dekorasi & Hiburan', detail: 'Diskusi layout pelaminan dan daftar lagu (playlist).' },
+            { id: 't12', title: 'Cek Kesehatan (Pre-marital)', detail: 'Suntik TT (untuk wanita) dan cek kesehatan umum.' }
+        ]
+    },
+    {
+        period: "3 Bulan Sebelum (Krusial)",
+        tasks: [
+            { id: 't13', title: 'Urus Dokumen KUA/Sipil', detail: 'Siapkan surat pengantar RT/RW, foto latar biru, dan berkas asli.' },
+            { id: 't14', title: 'Finalisasi Undangan', detail: 'Cetak dummy, cek penulisan nama, dan naik cetak.' },
+            { id: 't15', title: 'Beli Seserahan & Mahar', detail: 'Lengkapi semua barang seserahan untuk mulai dihias.' },
+            { id: 't16', title: 'Pilih Menu Final', detail: 'Tentukan komposisi gubukan dan menu prasmanan.' }
+        ]
+    },
+    {
+        period: "1 Bulan - H-2 Minggu",
+        tasks: [
+            { id: 't17', title: 'Distribusi Undangan', detail: 'Pastikan semua tamu sudah menerima undangan (fisik/digital).' },
+            { id: 't18', title: 'Technical Meeting (TM)', detail: 'Pertemuan koordinasi seluruh vendor di venue.' },
+            { id: 't19', title: 'Final Fitting', detail: 'Pastikan berat badan stabil dan baju nyaman dipakai.' },
+            { id: 't20', title: 'Konfirmasi Jumlah Tamu', detail: 'Update final RSVP ke vendor katering.' }
+        ]
+    },
+    {
+        period: "H-1 Minggu - Hari H",
+        tasks: [
+            { id: 't21', title: 'Manicure, Pedicure, Spa', detail: 'Relaksasi tubuh sebelum hari yang melelahkan.' },
+            { id: 't22', title: 'Packing Barang Bawaan', detail: 'Siapkan koper berisi baju ganti, alat ibadah, dan obat pribadi.' },
+            { id: 't23', title: 'Gladi Bersih', detail: 'Latihan prosesi akad/pemberkatan dan resepsi.' },
+            { id: 't24', title: 'Istirahat Total', detail: 'Tidur cukup agar wajah segar dan tidak mengantuk.' }
+        ]
+    }
+];
+
+        window.onload = () => {
+            signInAnonymously(auth).catch(console.error);
+            onAuthStateChanged(auth, user => {
+                if (user) {
+                    currentUser = user;
+                    document.getElementById('user-status').innerText = `ID: ${user.uid.slice(0,8)}`;
+                    initDatabase();
+                    document.getElementById('loader').classList.add('hidden');
+                    initBirthdaySurprise(); 
+        // -------------------------------
+
+    } else {
+        // Jika tidak ada user, lempar ke login
+        window.location.href = 'login.html';
+                }
+            });
+        };
+
+        function initDatabase() {
+    onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'checklist', 'status'), snap => {
+        data.checklist = snap.exists() ? snap.data() : {};
+        if (currentTab === 'checklist') renderChecklist();
+    });
+
+    onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'undangan'), snap => {
+        data.settingsUndangan = snap.exists() ? snap.data() : { link: '', message: '' };
+        const linkInput = document.getElementById('inp-undangan-link');
+        const pesanInput = document.getElementById('inp-undangan-pesan');
+        if (linkInput && document.activeElement !== linkInput) linkInput.value = data.settingsUndangan.link || '';
+        if (pesanInput && document.activeElement !== pesanInput) pesanInput.value = data.settingsUndangan.message || '';
+    });
+
+    ['seserahan', 'vendor', 'prabotan', 'tabungan', 'kas', 'tamu'].forEach(col => {
+        onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', col)), snap => {
+            data[col] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            
+            // Trigger render sesuai tab yang aktif
+            if (currentTab === 'kas') renderKas();
+            if (currentTab === 'tabungan') renderSavings();
+            if (currentTab === 'tamu') renderTamu();
+            if (['seserahan', 'vendor', 'prabotan'].includes(currentTab)) renderInventory();
+            
+            updateTotals();
+        });
+    });
+}
+
+        window.switchTab = (tabId) => {
+    currentTab = tabId;
+    
+    // Reset visual sidebar
+    document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
+    document.getElementById(`btn-${tabId}`)?.classList.add('active');
+
+    // Reset visual bottom nav (mobile)
+    document.querySelectorAll('#bottomNav .bn-item').forEach(el => el.classList.remove('active'));
+    document.getElementById(`bn-${tabId}`)?.classList.add('active');
+    
+    // Sembunyikan semua section
+    document.querySelectorAll('.section-content').forEach(el => el.classList.remove('active'));
+    
+    // Update Judul
+    const titles = { 
+        checklist: 'Panduan Lengkap', 
+        seserahan: 'Manajemen Seserahan', 
+        vendor: 'Daftar Vendor', 
+        prabotan: 'Isi Rumah', 
+        tabungan: 'Tabungan Bersama', 
+        kas: 'Arus Kas',
+        tamu: 'Daftar Tamu Undangan',
+        pengaturan: 'Notifikasi Telegram'
+    };
+    document.getElementById('section-title').innerText = titles[tabId];
+    
+    // Logika pemilihan section (PENTING)
+    if (tabId === 'kas') {
+        document.getElementById('section-kas').classList.add('active');
+        renderKas();
+    } else if (tabId === 'checklist') {
+        document.getElementById('section-checklist').classList.add('active');
+        renderChecklist();
+    } else if (tabId === 'tabungan') {
+        document.getElementById('section-tabungan').classList.add('active');
+        renderSavings();
+    } else if (tabId === 'tamu') {
+        document.getElementById('section-tamu').classList.add('active');
+        document.getElementById('inp-undangan-link').value = data.settingsUndangan.link || '';
+        document.getElementById('inp-undangan-pesan').value = data.settingsUndangan.message || '';
+        renderTamu();
+    } else if (tabId === 'pengaturan') {
+        document.getElementById('section-pengaturan').classList.add('active');
+        window.loadTelegramSettingsUI();
+        lucide.createIcons();
+    } else {
+        // Ini hanya untuk seserahan, vendor, dan prabotan
+        document.getElementById('section-inventory').classList.add('active');
+        document.getElementById('inv-title').innerText = `Daftar ${tabId}`;
+        document.getElementById('subtotal-label').innerText = `Subtotal ${tabId}`;
+        renderInventory();
+    }
+
+    if (window.innerWidth < 1024) {
+        const sidebar = document.getElementById('sidebar');
+        if (!sidebar.classList.contains('-translate-x-full')) toggleSidebar();
+    }
+};
+
+        function renderChecklist() {
+            const container = document.getElementById('checklist-timeline');
+            container.innerHTML = timeline.map(section => `
+                <div class="space-y-6">
+                    <div class="flex items-center gap-4"><div class="h-px bg-rose-200 flex-1"></div><span class="text-rose-500 font-bold text-xs uppercase bg-rose-50 px-4 py-1.5 rounded-full border border-rose-100">${section.period}</span><div class="h-px bg-rose-200 flex-1"></div></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${section.tasks.map(task => {
+                            const isDone = data.checklist[task.id] || false;
+                            return `<div onclick="window.toggleCheck('${task.id}')" class="p-5 bg-white border rounded-3xl flex gap-4 cursor-pointer hover:border-rose-400 transition-all ${isDone ? 'bg-slate-50 border-slate-200' : 'border-gray-100'}">
+                                <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center ${isDone ? 'bg-rose-500 border-rose-500 text-white' : 'border-gray-200'}">${isDone ? '<i data-lucide="check" size="14"></i>' : ''}</div>
+                                <div><h4 class="font-bold text-gray-800 ${isDone ? 'line-through text-gray-400' : ''}">${task.title}</h4><p class="text-xs text-gray-500 mt-1">${task.detail}</p></div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+        // Fungsi untuk kompres foto otomatis
+const compressImage = (file, maxWidth = 800, quality = 0.7) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Hitung rasio agar foto tetap proporsional
+                if (width > maxWidth) {
+                    height = (maxWidth / width) * height;
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Ubah menjadi Base64 dengan kualitas 0.7 (70%)
+                const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedBase64);
+            };
+        };
+        reader.onerror = (error) => reject(error);
+    });
+};
+
+        
+
+        function updateTotals() {
+            const totalCost = ['seserahan', 'vendor', 'prabotan'].reduce((acc, col) => acc + (data[col] || []).reduce((s, i) => s + (Number(i.price) || 0), 0), 0);
+            const totalSaved = (data.tabungan || []).reduce((s, i) => s + (Number(i.price) || 0), 0);
+            document.getElementById('grand-total').innerText = `Rp ${totalCost.toLocaleString('id-ID')}`;
+            document.getElementById('gap-total').innerText = `Rp ${Math.max(0, totalCost - totalSaved).toLocaleString('id-ID')}`;
+        }
+
+        window.toggleCheck = async (id) => { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'checklist', 'status'), { ...data.checklist, [id]: !data.checklist[id] }); };
+        
+        // Tambahkan fungsi untuk update status ceklis
+window.toggleItemStatus = async (id, currentStatus) => {
+    const { updateDoc, doc } = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js");
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', currentTab, id), {
+        isDone: !currentStatus
+    });
+};
+
+window.addItem = async () => {
+    const btn = document.getElementById('btn-add-item');
+    const fileInput = document.getElementById('inp-file');
+    const n = document.getElementById('inp-name').value;
+    const p = document.getElementById('inp-price').value;
+    const l = document.getElementById('inp-link').value;
+    const cat = document.getElementById('inp-cat').value;
+    
+    if (!n) { showToast("Nama barang wajib diisi!", "error"); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>';
+
+    try {
+        let photoBase64 = "";
+        // Jika ada file, kompres lebih kecil (max 500px) agar pasti muat di database
+        if (fileInput.files && fileInput.files[0]) {
+            photoBase64 = await compressImage(fileInput.files[0], 500, 0.5); 
+        }
+
+        const { addDoc, collection } = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js");
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', currentTab), { 
+            name: n, 
+            price: Number(p) || 0, 
+            link: l || "", 
+            category: currentTab === 'seserahan' ? cat : 'Umum',
+            photo: photoBase64, // Data gambar yang sudah dikompres
+            isDone: false,
+            date: new Date().toISOString() 
+        });
+
+        // Reset form
+        document.getElementById('inp-name').value = ''; 
+        document.getElementById('inp-price').value = '';
+        document.getElementById('inp-link').value = '';
+        fileInput.value = ''; 
+
+    } catch (err) {
+        console.error("Gagal simpan:", err);
+        showToast("Gagal menyimpan. Pastikan ukuran foto tidak terlalu besar.", "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="plus" class="mr-2"></i> Tambah';
+        lucide.createIcons();
+    }
+};
+// Perbaikan fungsi render untuk menampilkan foto & link klik
+function renderInventory() {
+    const list = data[currentTab] || [];
+    const tbody = document.getElementById('inventory-table-body');
+    let sub = 0;
+
+    // Sorting: Barang yang belum dibeli muncul di atas
+    list.sort((a, b) => (a.isDone - b.isDone));
+    
+    tbody.innerHTML = list.length === 0 ? 
+        '<tr><td colspan="5" class="p-10 text-center text-gray-400 italic">Belum ada data.</td></tr>' : 
+        list.map(item => {
+            if (!item.isDone) sub += Number(item.price) || 0;
+            
+            return `
+                <tr class="hover:bg-slate-50/50 transition-colors ${item.isDone ? 'opacity-60 bg-slate-50' : ''}">
+                    <td class="px-6 py-5" data-label="Beli">
+                        <button onclick="toggleItemStatus('${item.id}', ${item.isDone})" class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${item.isDone ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-200'}">
+                            ${item.isDone ? '<i data-lucide="check" size="14"></i>' : ''}
+                        </button>
+                    </td>
+<td class="px-6 py-5" data-label="Detail Barang">
+            <div class="flex items-center gap-3">
+                <div onclick="${item.photo ? `showPreview('${item.photo}')` : ''}" 
+                     class="w-12 h-12 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-100 cursor-pointer">
+                    ${item.photo 
+                        ? `<img src="${item.photo}" class="w-full h-full object-cover">` 
+                        : `<div class="w-full h-full flex items-center justify-center text-gray-300"><i data-lucide="image" size="16"></i></div>`
+                    }
+                </div>
+                <div>
+                    <p class="font-bold text-gray-800">${item.name}</p>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase">${item.category || 'Umum'}</p>
+                </div>
+            </div>
+        </td>
+                    <td class="px-6 py-5" data-label="Tautan">
+                        ${item.link ? `
+                            <a href="${item.link.startsWith('http') ? item.link : 'https://' + item.link}" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-all text-xs font-bold border border-blue-100">
+                                <i data-lucide="external-link" size="14"></i> Beli
+                            </a>
+                        ` : '<span class="text-gray-300 text-xs italic">Tanpa Link</span>'}
+                    </td>
+                    <td class="px-6 py-5 font-mono font-bold text-gray-700" data-label="Harga">
+                        Rp ${(Number(item.price) || 0).toLocaleString('id-ID')}
+                    </td>
+                    <td class="px-6 py-5 text-right" data-label="">
+                        <button onclick="removeItem('${item.id}')" class="text-gray-300 hover:text-rose-500 transition-colors" aria-label="Hapus item">
+                            <i data-lucide="trash-2" size="18"></i>
+                        </button>
+                    </td>
+                </tr>`;
+        }).join('');
+    
+    document.getElementById('subtotal-value').innerText = `Rp ${sub.toLocaleString('id-ID')}`;
+    lucide.createIcons();
+}
+
+        window.renderSavings = () => {
+    const list = data.tabungan || [];
+    list.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    const tbody = document.getElementById('savings-table-body');
+    const statementDiv = document.getElementById('monthly-statement'); // Elemen baru untuk rekapan
+    let total = 0;
+    let monthlyData = {};
+
+    // Render Tabel Transaksi
+    tbody.innerHTML = list.map(item => {
+        const isKeluar = item.price < 0;
+        total += item.price;
+        
+        // Logika Rekapan Bulanan
+        const monthKey = new Date(item.date).toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+        if (!monthlyData[monthKey]) monthlyData[monthKey] = 0;
+        monthlyData[monthKey] += item.price;
+
+        return `
+            <tr class="hover:bg-slate-50/50">
+                <td class="px-6 py-5" data-label="Penyetor">
+                    <p class="font-bold text-gray-800">${item.name}</p>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase">${item.date}</p>
+                </td>
+                <td class="px-6 py-5 font-mono font-bold ${isKeluar ? 'text-rose-500' : 'text-emerald-600'}" data-label="Nominal">
+                    ${isKeluar ? '-' : '+'} Rp ${Math.abs(item.price).toLocaleString('id-ID')}
+                </td>
+                <td class="px-6 py-5 text-right" data-label="">
+                    <button onclick="removeItem('${item.id}')" class="text-gray-300 hover:text-rose-500 p-2" aria-label="Hapus item"><i data-lucide="trash-2" size="18"></i></button>
+                </td>
+            </tr>`;
+    }).join('');
+
+    // Render Rekapan Bulanan ke UI
+    statementDiv.innerHTML = Object.entries(monthlyData).map(([month, sum]) => `
+        <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            <span class="text-xs font-bold text-gray-500 uppercase">${month}</span>
+            <span class="font-mono font-bold ${sum < 0 ? 'text-rose-500' : 'text-emerald-600'}">Rp ${sum.toLocaleString('id-ID')}</span>
+        </div>
+    `).join('');
+
+    document.getElementById('saving-total-value').innerText = `Rp ${total.toLocaleString('id-ID')}`;
+    lucide.createIcons();
+};
+
+        window.addSaving = async () => {
+    const n = document.getElementById('inp-saver').value;
+    const p = document.getElementById('inp-save-amount').value;
+    const type = document.getElementById('inp-save-type').value; // Ambil dari select baru
+    const date = document.getElementById('inp-save-date').value || new Date().toISOString().split('T')[0];
+    
+    if (!n || !p || !currentUser) { showToast("Isi nama dan nominal!", "error"); return; }
+    
+    // Jika jenisnya 'keluar', simpan sebagai angka negatif untuk memudahkan perhitungan total
+    const finalPrice = type === 'keluar' ? -Math.abs(Number(p)) : Math.abs(Number(p));
+
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'tabungan'), { 
+        name: n, 
+        price: finalPrice, 
+        type: type,
+        date: date 
+    });
+    
+    document.getElementById('inp-save-amount').value = '';
+};
+
+        // ===================== FITUR DAFTAR TAMU UNDANGAN =====================
+
+        // Normalisasi nomor WA ke format internasional (62xxx) tanpa spasi/simbol
+        function normalizePhone(raw) {
+            let p = (raw || '').replace(/[^0-9+]/g, '');
+            p = p.replace(/^\+/, '');
+            if (p.startsWith('0')) p = '62' + p.slice(1);
+            if (!p.startsWith('62')) p = '62' + p;
+            return p;
+        }
+
+        window.addTamu = async () => {
+    const btn = document.getElementById('btn-add-tamu');
+    const nama = document.getElementById('inp-tamu-nama').value.trim();
+    const wa = document.getElementById('inp-tamu-wa').value.trim();
+    const pihak = document.getElementById('inp-tamu-pihak').value;
+
+    if (!nama || !wa) { showToast("Nama dan Nomor WA wajib diisi!", "error"); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>';
+
+    try {
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'tamu'), {
+            name: nama,
+            phone: normalizePhone(wa),
+            pihak: pihak,
+            sent: false,
+            date: new Date().toISOString()
+        });
+
+        document.getElementById('inp-tamu-nama').value = '';
+        document.getElementById('inp-tamu-wa').value = '';
+    } catch (err) {
+        console.error("Gagal simpan tamu:", err);
+        showToast("Terjadi kesalahan saat menyimpan data tamu.", "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="plus" class="mr-2"></i> Tambah Tamu';
+        lucide.createIcons();
+    }
+};
+
+window.renderTamu = () => {
+    const list = data.tamu || [];
+    const tbody = document.getElementById('tamu-table-body');
+
+    const totalPria = list.filter(t => t.pihak === 'pria').length;
+    const totalWanita = list.filter(t => t.pihak === 'wanita').length;
+    document.getElementById('tamu-total-value').innerText = list.length;
+    document.getElementById('tamu-pria-value').innerText = totalPria;
+    document.getElementById('tamu-wanita-value').innerText = totalWanita;
+
+    tbody.innerHTML = list.length === 0 ? '<tr><td colspan="5" class="p-10 text-center text-gray-400 italic">Belum ada tamu ditambahkan.</td></tr>' : list.map(item => {
+        const isPria = item.pihak === 'pria';
+        return `
+            <tr class="hover:bg-slate-50/50">
+                <td class="px-6 py-5" data-label="Nama">
+                    <p class="font-bold text-gray-800">${item.name}</p>
+                </td>
+                <td class="px-6 py-5 font-mono text-gray-600" data-label="No. WA">${item.phone}</td>
+                <td class="px-6 py-5" data-label="Pihak">
+                    <span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase ${isPria ? 'bg-blue-100 text-blue-600' : 'bg-rose-100 text-rose-600'}">
+                        ${isPria ? 'Pria' : 'Wanita'}
+                    </span>
+                </td>
+                <td class="px-6 py-5" data-label="Status Undangan">
+                    <button onclick="toggleTamuSent('${item.id}', ${item.sent})" class="px-2 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${item.sent ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400'}">
+                        ${item.sent ? '✓ Terkirim' : 'Belum Kirim'}
+                    </button>
+                </td>
+                <td class="px-6 py-5 text-right" data-label="">
+                    <div class="flex items-center justify-end gap-1">
+                        <button onclick="sendInvite('${item.id}')" title="Kirim Undangan via WA" class="text-emerald-500 hover:text-emerald-700 p-2">
+                            <i data-lucide="send" size="18"></i>
+                        </button>
+                        <button onclick="removeItem('${item.id}')" class="text-gray-300 hover:text-rose-500 p-2" aria-label="Hapus item"><i data-lucide="trash-2" size="18"></i></button>
+                    </div>
+                </td>
+            </tr>`;
+    }).join('');
+
+    lucide.createIcons();
+};
+
+window.toggleTamuSent = async (id, current) => {
+    const { updateDoc, doc } = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js");
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tamu', id), { sent: !current });
+};
+
+window.saveUndanganSettings = async () => {
+    const btn = document.getElementById('btn-save-undangan');
+    const link = document.getElementById('inp-undangan-link').value.trim();
+    const message = document.getElementById('inp-undangan-pesan').value.trim();
+
+    btn.disabled = true;
+    try {
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'undangan'), { link, message });
+        btn.innerHTML = '<i data-lucide="check" size="16"></i> Tersimpan!';
+        lucide.createIcons();
+        setTimeout(() => {
+            btn.innerHTML = '<i data-lucide="save" size="16"></i> Simpan Pengaturan';
+            lucide.createIcons();
+        }, 1500);
+    } catch (err) {
+        console.error("Gagal simpan pengaturan undangan:", err);
+        showToast("Gagal menyimpan pengaturan.", "error");
+    } finally {
+        btn.disabled = false;
+    }
+};
+
+// Kirim undangan: buka WhatsApp dengan pesan + link undangan sudah terisi otomatis
+window.sendInvite = (id) => {
+    const tamu = (data.tamu || []).find(t => t.id === id);
+    if (!tamu) return;
+
+    const link = data.settingsUndangan?.link || '';
+    let template = data.settingsUndangan?.message || 'Assalamualaikum {nama}, kami mengundang kehadiran Anda di acara pernikahan kami. Berikut link undangannya: {link}';
+
+    if (!link) {
+        showToast("Isi dulu 'Link Undangan Digital' di Pengaturan Undangan sebelum mengirim.", "error");
+        return;
+    }
+
+    const pesan = template.replaceAll('{nama}', tamu.name).replaceAll('{link}', link);
+    const url = `https://wa.me/${tamu.phone}?text=${encodeURIComponent(pesan)}`;
+    window.open(url, '_blank');
+};
+
+        // ================== AKHIR FITUR DAFTAR TAMU UNDANGAN ==================
+
+        // Fungsi mengubah file gambar menjadi string teks (Base64)
+const toBase64 = file => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+});
+
+window.addKas = async () => {
+    const desc = document.getElementById('inp-kas-desc').value;
+    const type = document.getElementById('inp-kas-type').value;
+    const amount = document.getElementById('inp-kas-amount').value;
+    const dateManual = document.getElementById('inp-kas-date').value;
+    const fileInput = document.getElementById('inp-kas-file');
+    const btn = document.getElementById('btn-add-kas');
+
+    if (!desc || !amount || !currentUser) { showToast("Keterangan dan nominal wajib diisi!", "error"); return; }
+
+    btn.disabled = true;
+    // Animasi loading sederhana
+    btn.innerHTML = '<div class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>';
+
+    try {
+        let photoData = "";
+        
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            // Kompres foto sebelum simpan
+            photoData = await compressImage(file, 800, 0.6); // Max lebar 800px, kualitas 60%
+        }
+
+        const finalDate = dateManual || new Date().toISOString().split('T')[0];
+        const finalAmount = Number(amount) || 0;
+
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'kas'), {
+            name: desc,
+            type: type,
+            price: finalAmount,
+            date: finalDate,
+            photo: photoData
+        });
+
+        // Reset Form
+        document.getElementById('inp-kas-desc').value = '';
+        document.getElementById('inp-kas-amount').value = '';
+        document.getElementById('inp-kas-file').value = '';
+        document.getElementById('inp-kas-date').value = '';
+
+        showToast(`${type === 'masuk' ? 'Pemasukan' : 'Pengeluaran'} berhasil dicatat!`, 'success');
+
+        // Hitung saldo terkini untuk disertakan di notifikasi
+        const balanceAfter = (data.kas || []).reduce((sum, it) => sum + (it.type === 'masuk' ? it.price : -it.price), 0)
+            + (finalAmount * (type === 'masuk' ? 1 : -1));
+
+        const emoji = type === 'masuk' ? '✅ Pemasukan' : '❌ Pengeluaran';
+        const sign = type === 'masuk' ? '+' : '-';
+        const tglFormat = new Date(finalDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        sendTelegramNotification(
+            `<b>${emoji} Baru Dicatat</b>\n` +
+            `📝 Keterangan: ${desc}\n` +
+            `💰 Nominal: ${sign} Rp ${finalAmount.toLocaleString('id-ID')}\n` +
+            `📅 Tanggal: ${tglFormat}\n` +
+            `💼 Saldo Kas Sekarang: Rp ${balanceAfter.toLocaleString('id-ID')}`
+        );
+        
+    } catch (err) {
+        console.error("Gagal simpan:", err);
+        showToast("Terjadi kesalahan saat menyimpan data.", "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="plus"></i>';
+        lucide.createIcons();
+    }
+};
+window.renderKas = () => {
+    const list = data.kas || [];
+    list.sort((a, b) => new Date(b.date) - new Date(a.date));
+    const tbody = document.getElementById('kas-table-body');
+    let balance = 0;
+
+    tbody.innerHTML = list.length === 0 ? '<tr><td colspan="4" class="p-10 text-center text-gray-400 italic">Belum ada mutasi kas.</td></tr>' : list.map(item => {
+        const isMasuk = item.type === 'masuk';
+        balance += isMasuk ? item.price : -item.price;
+
+        return `
+            <tr class="hover:bg-slate-50/50">
+                <td class="px-6 py-5" data-label="Tanggal & Keterangan">
+                    <div class="text-[10px] text-gray-400 font-bold uppercase mb-0.5">${item.date || '-'}</div>
+                    <div class="font-semibold text-gray-800 flex items-center gap-2">
+                        ${item.name}
+                        ${item.photo ? `
+                            <button onclick="showPreview('${item.photo}')" class="text-blue-500 hover:scale-110 transition-transform">
+                                <i data-lucide="image" size="14"></i>
+                            </button>` : ''}
+                    </div>
+                </td>
+                <td class="px-6 py-5" data-label="Jenis">
+                    <span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase ${isMasuk ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}">
+                        ${item.type}
+                    </span>
+                </td>
+                <td class="px-6 py-5 font-mono font-bold ${isMasuk ? 'text-emerald-600' : 'text-rose-600'}" data-label="Nominal">
+                    ${isMasuk ? '+' : '-'} Rp ${item.price.toLocaleString('id-ID')}
+                </td>
+                <td class="px-6 py-5 text-right" data-label="">
+                    <button onclick="removeItem('${item.id}')" class="text-gray-200 hover:text-rose-500 p-2" aria-label="Hapus item"><i data-lucide="trash-2" size="18"></i></button>
+                </td>
+            </tr>`;
+    }).join('');
+
+    document.getElementById('kas-balance-value').innerText = `Rp ${balance.toLocaleString('id-ID')}`;
+    lucide.createIcons();
+};
+
+window.showPreview = (base64) => {
+    const modalImg = document.getElementById('modal-img');
+    const modalDiv = document.getElementById('modal-photo');
+    
+    if (modalImg && modalDiv) {
+        modalImg.src = base64;
+        modalDiv.classList.add('active');
+    } else {
+        console.error("Elemen modal tidak ditemukan di HTML!");
+    }
+};
+
+window.closePreview = () => {
+    const modalDiv = document.getElementById('modal-photo');
+    if (modalDiv) modalDiv.classList.remove('active');
+};
+
+        window.removeItem = async (id) => {
+            if (currentTab === 'kas') {
+                const item = (data.kas || []).find(k => k.id === id);
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', currentTab, id));
+                showToast('Data kas dihapus.', 'info');
+                if (item) {
+                    sendTelegramNotification(
+                        `<b>🗑 Catatan Kas Dihapus</b>\n` +
+                        `📝 Keterangan: ${item.name}\n` +
+                        `💰 Nominal: Rp ${Number(item.price).toLocaleString('id-ID')} (${item.type})`
+                    );
+                }
+                return;
+            }
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', currentTab, id));
+            showToast('Data dihapus.', 'info');
+        };
+        window.toggleSidebar = () => { document.getElementById('sidebar').classList.toggle('-translate-x-full'); document.getElementById('sidebarOverlay').classList.toggle('hidden'); };
+    </script>
+    <div id="birthday-trigger" class="fixed bottom-24 right-4 sm:bottom-8 sm:right-8 z-[10000] hidden">
+    <button onclick="openEnvelope()" class="bg-rose-500 text-white p-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce hover:scale-110 transition-transform">
+        <i data-lucide="mail"></i>
+        <span class="font-bold text-sm">Ada pesan untuk Shintya...</span>
+    </button>
+</div>
+    
+    <div id="birthday-modal" class="fixed inset-0 z-modal flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-[2.5rem] max-w-sm w-full overflow-hidden shadow-2xl animate-pop relative border border-rose-100">
+        <div class="p-8 text-center">
+            <div class="relative inline-block mb-6">
+                <div class="absolute inset-0 bg-rose-100 rounded-3xl rotate-6 float-animation"></div>
+                <img src="./IMG-20250627-WA0081.jpg" alt="Shintya" class="relative w-48 h-60 object-cover rounded-3xl shadow-md border-4 border-white">
+                <div class="absolute -top-3 -right-3 bg-rose-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg font-bold">21</div>
+            </div>
+
+            <h2 class="font-serif text-2xl font-bold text-gray-800 mb-1">Happy Birthday!</h2>
+            <p class="text-rose-500 font-bold text-lg mb-4">Shintya Choerunisa</p>
+            
+            <p class="text-gray-500 text-sm leading-relaxed mb-8 px-2">
+                "Barakallah fii umrik sayang, semoga di usia ke-21 ini kamu makin bahagia dan semua rencana kita kedepan dilancarkan Allah. ❤️"
+            </p>
+
+            <div class="space-y-3">
+                <a href="https://wa.me/6289520966316?text=Aamiin..%20Terima%20kasih%20banyak%20ya%20sayang!%20❤️" 
+                   class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95">
+                    <i data-lucide="heart"></i> Balas ke WhatsApp
+                </a>
+                <button onclick="closeBirthdayModal()" class="text-gray-400 text-xs font-medium hover:text-rose-400 transition-colors">
+                    Tutup Kejutan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<audio id="birthday-song" loop>
+    <source src="./happybirthday.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+    // ==== PWA: Service Worker + Tombol Install ====
+    let deferredInstallPrompt = null;
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW gagal daftar:', err));
+        });
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        const btn = document.getElementById('installBtn');
+        if (btn) btn.classList.add('show');
+    });
+
+    window.triggerInstall = async () => {
+        if (!deferredInstallPrompt) return;
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        document.getElementById('installBtn')?.classList.remove('show');
+    };
+
+    window.addEventListener('appinstalled', () => {
+        document.getElementById('installBtn')?.classList.remove('show');
+    });
+</script>
+</body>
+</html>
