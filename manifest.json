@@ -1,0 +1,32 @@
+{
+  "name": "WeddingPro - Pra-Nikah Planner",
+  "short_name": "WeddingPro",
+  "description": "Aplikasi perencana pra-nikah: checklist, seserahan, vendor, tabungan, dan kas.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f8fafc",
+  "theme_color": "#f43f5e",
+  "lang": "id",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

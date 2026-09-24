@@ -1,0 +1,29 @@
+/* birthday.css */
+#birthday-modal {
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    transition: opacity 0.3s ease;
+}
+
+.animate-pop { 
+    animation: popScale 0.5s cubic-bezier(0.26, 0.53, 0.74, 1.48); 
+}
+
+@keyframes popScale {
+    0% { transform: scale(0.7); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.float-animation { 
+    animation: floating 3s ease-in-out infinite; 
+}
+
+@keyframes floating {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+
+/* Memastikan modal di atas segalanya */
+.z-modal {
+    z-index: 9999;
+}
